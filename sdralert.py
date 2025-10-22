@@ -37,13 +37,14 @@ def my_function():
     colonCount = 0
     last_occurence_char = 0
     skipCallSet = {"N1AAA"}
+    lastTime = "00:00:00"
         
     print(file_name)
     
     try:
         with open(file_name, 'r') as file:
             for line in file:
-                # Process each line here
+                
                 call = ""
                 grid = ""
                 
@@ -54,12 +55,16 @@ def my_function():
                 
                 #print("new line ",new_line)
                 
-                #sys.exit()
-                
                 values = new_line.split()
                 line_seperator = values[7]
                 #print("line seperator ", line_seperator)
                 
+                line_time   = values[1]
+                #print("line time ",line_time)
+		
+                compare_time(line_time)
+                
+                #sys.exit()
                 # #02  14:38:15     50,313  FT8        1  0.3 2658 ~  CQ K2TY EM60
                 
                 match line_seperator:
@@ -79,38 +84,42 @@ def my_function():
                 #if lineCount == 10:
                 #    sys.exit()
                     
-                #print("before last")
-                last = new_line.split("~")[1] 
+                #last = new_line.split("~")[1] 
                 
-                first_half  = new_line.split("~")[0]
-                
-                line_time   = first_half.split(" ")[1]
+                last = new_line.split(line_seperator)[1] 
+                                
+                #first_half  = new_line.split("~")[0]
+                first_half = new_line.split(line_seperator)[0] # 10/22/2025
+                                
                 line_freq   = first_half.split(" ")[2]
                 line_mode   = first_half.split(" ")[3]
                 line_report = first_half.split(" ")[4]
                 
-                #print("time ",line_time)
-
-                compare_time(line_time)
-
                 firstField = last.split(" ")[1]
                 call = last.split(" ")[2]
-            
+                                
                 # last field could be grid, 73 or report
                 if firstField == "CQ":
-                    if call == "DX" or call == "DE" or call == "SW":
+                    if call == "DX" or call == "DE" or call == "SW":       
                         grid = last.split(" ")[4]
                         call = last.split(" ")[3]
                     else:
-                        grid = last.split(" ")[3]
-                        
+                        # this fails when a cq doesn't have a grid
+                        try:
+                            grid = last.split(" ")[3]
+                        except ValueError as e:
+                            # Handle cases where the split doesn't result in the expected number of items
+                            print(f"Error processing line '{line}': {e}. Expected Grid got {len(last.split(''))}.")
+                        except Exception as e:
+                            # Catch any other unexpected errors
+                            print(f"An unexpected error occurred with line '{last}': {e}")
                 
                 # put call in list if cq but need to check skiplist for none cq lines
                 if grid == "EM50" or grid == "EM60" or grid == "EL49":
                     skipCount = skipCount + 1
                     print("Adding Grid ",lineCount, grid, call)
                     skipCallSet.add(call)
-                    #print("skip")
+                    continue
                 else:
                     print("Good Line ",lineCount, new_line)
                     
@@ -122,9 +131,12 @@ def my_function():
 		            
                     conn.commit()
                 
+                # if a station is not cq'ing they won't have a grid so this check is to skip those records
                 value_to_check = call
                 if value_to_check in skipCallSet:
+                    skipCount = skipCount + 1
                     print(f"Yes, '{value_to_check}' is in the set.")
+                    continue
                 else:
                     print(f"No, '{value_to_check}' is not in the set.")
                 
@@ -168,7 +180,7 @@ def compare_time(line_time):
 
     current_time = get_time()
     
-    time_str1 = current_time   # "14:30:00"
+    time_str1 = current_time   # "14:30:00" 
 
     time_str2 = line_time  # "09:15:00"
 
@@ -178,7 +190,14 @@ def compare_time(line_time):
 
     dt_obj2 = datetime.strptime(time_str2, format_string).time() 
 
-    #print(dt_obj1 > dt_obj2) # Output: True
+    #print("date objects ",dt_obj1 > dt_obj2) # Output: True
+    
+    # this test works 10/21/2025
+    #if dt_obj1 > dt_obj2:
+    #    print("current time greater ", dt_obj1, dt_obj2)
+    #else:
+    #    print("line time greater ", dt_obj1, dt_obj2)
+                
     
 
 def sqlite_db():
@@ -311,6 +330,13 @@ def sound_alarm():
 while True:
 
     get_time()
+    
+    print("Script name:", sys.argv[0])
+    if len(sys.argv) > 1:
+        print("First argument:", sys.argv[1])
+    else:
+        print("No arguments provided.")
+    
     sqlite_db()
     my_function()
     time.sleep(60) # Wait for 60 seconds (1 minute)           
