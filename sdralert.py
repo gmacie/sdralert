@@ -27,17 +27,19 @@ directory_path = "c:/skmrsummary" # Replace with the actual path
 
 def my_function():
 
-    alarm_list = ["3B8FA", "39BFR", "9J2FI", "E51WL", "FR4AW", "PJ6Y", "PY0FB", "V51WW", "TZ4AM", "VP2MAA", "ZD7CTO", "ZS6OB"]
-    grid_list  = ["CM93", "CN74", "CN75", "CN93", "DL89", "DM23", "DM27", "DM39", "EM43"]
+    alarm_list = ["3B8FA", "39BFR", "6W1RD", "9J2FI", "C5R", "E51WL", "EL2BG", "FR4AW", "HZ1DG", "PJ6Y", "PY0FB", "SO1WS", "TR8CA", "TZ4AM", "V51WW", "VP2MAA", "ZD7CTO", "ZS6OB"]
     
-    lineCount = 0
-    skipCount = 0
-    tildeCount = 0
-    plusCount = 0
-    colonCount = 0
+    grid_list  = ["CM93", "CN74", "CN75", "CN93", "DL89", "DM23", "DM27", "DM39", "DN01", "DN02", "DN03", "DN04", "DN10", "DN12", "DN21", "DN24", "DN32"]
+    
+    line_count = 0
+    skip_count = 0
+    tilde_count = 0
+    plus_count = 0
+    colon_count = 0
+    cq_count = 0
     last_occurence_char = 0
     skipCallSet = {"N1AAA"}
-    lastTime = "00:00:00"
+    last_time = "00:00:00"
         
     print(file_name)
     
@@ -47,59 +49,77 @@ def my_function():
                 
                 call = ""
                 grid = ""
-                
-                #print(line.strip())  # .strip() removes leading/trailing whitespace, including the newline character
         
-                lineCount = lineCount + 1
+                line_count = line_count + 1
                 new_line = " ".join(line.strip().split())
                 
                 #print("new line ",new_line)
                 
+                # values[0] receiver_nbr
+                # values[1] line_time
+                # values[2] freq
+                # values[3] mode
+                # #01  01:36:30     50,313  FT8       25  0.1 1620 ~  CQ W5THT EM50
+                
                 values = new_line.split()
                 line_seperator = values[7]
-                #print("line seperator ", line_seperator)
                 
                 line_time   = values[1]
                 #print("line time ",line_time)
 		
                 compare_time(line_time)
+                # go to next line if time has already been processed.
+                # if line time is less than last run time then continue to next line
                 
-                #sys.exit()
+                
                 # #02  14:38:15     50,313  FT8        1  0.3 2658 ~  CQ K2TY EM60
                 
                 match line_seperator:
                         case "+":
-                            plusCount = plusCount + 1
+                            plus_count = plus_count + 1
                             continue
                         case ":":
-                            colonCount = colonCount + 1
+                            colon_count = colon_count + 1
                             continue
                         case "~":
-                            tildeCount = tildeCount + 1
+                            tilde_count = tilde_count + 1
                             pass
                         case _:  # Default case, like 'else'
                             print(f"Unknown line_seperator: {line_seperator}")
                             sys.exit()
-               
-                #if lineCount == 10:
-                #    sys.exit()
-                    
-                #last = new_line.split("~")[1] 
+           
                 
-                last = new_line.split(line_seperator)[1] 
                                 
-                #first_half  = new_line.split("~")[0]
                 first_half = new_line.split(line_seperator)[0] # 10/22/2025
                                 
                 line_freq   = first_half.split(" ")[2]
                 line_mode   = first_half.split(" ")[3]
                 line_report = first_half.split(" ")[4]
                 
-                firstField = last.split(" ")[1]
+                
+                last = new_line.split(line_seperator)[1]
+                firstField = last.split(" ")[1] 
+                
                 call = last.split(" ")[2]
+                
+                # check value 3 for 73 and R- !!!
+                try:
+                    grid = last.split(" ")[3]
+                except ValueError as e:
+                    # Handle cases where the split doesn't result in the expected number of items
+                    print(f"Error processing line '{line}': {e}. Expected Grid got {len(last.split(''))}.")
+                except Exception as e:
+                    # Catch any other unexpected errors
+                    print(f"An unexpected error occurred with line '{last}': {e}")
                                 
                 # last field could be grid, 73 or report
+                #01  03:04:15     50,313  FT8       14  0.9 1514 ~  CQ KO5S EM50
+                #04  13:51:30     50,275  Q65-30A   -9  0.2 1317 :  K0TPP AE5VB 73                        q0
+                #04  13:42:00     50,275  Q65-30A    2  0.2 1657 :  KA2UQW AE5VB EM50                     q0
+                #04  13:46:30     50,275  Q65-30A   -1  0.1 1657 :  K0TPP AE5VB R-10                      q0
+                
                 if firstField == "CQ":
+                    cq_count = cq_count + 1
                     if call == "DX" or call == "DE" or call == "SW":       
                         grid = last.split(" ")[4]
                         call = last.split(" ")[3]
@@ -116,13 +136,25 @@ def my_function():
                 
                 # put call in list if cq but need to check skiplist for none cq lines
                 if grid == "EM50" or grid == "EM60" or grid == "EL49":
-                    skipCount = skipCount + 1
-                    print("Adding Grid ",lineCount, grid, call)
-                    skipCallSet.add(call)
+                    skip_count = skip_count + 1
+                    
+                    if call in skipCallSet:
+                        pass
+                    else:
+                        print("Adding Call to Skip List ",line_count, call, grid)
+                        skipCallSet.add(call)
                     continue
                 else:
-                    print("Good Line ",lineCount, new_line)
                     
+                    # if a station is not cq'ing they won't have a grid so this check is to skip those records
+                    if call in skipCallSet:
+                        skip_count = skip_count + 1
+                        print(f"Not a CQ secondary check '{call}' is in the set.")
+                        continue
+                    else:
+                        pass
+                        #print(f"Second Check No, '{call}' is not in the set.")
+                
                     conn = sqlite3.connect('my_database.db')
                     cursor = conn.cursor()
                     
@@ -131,16 +163,7 @@ def my_function():
 		            
                     conn.commit()
                 
-                # if a station is not cq'ing they won't have a grid so this check is to skip those records
-                value_to_check = call
-                if value_to_check in skipCallSet:
-                    skipCount = skipCount + 1
-                    print(f"Yes, '{value_to_check}' is in the set.")
-                    continue
-                else:
-                    print(f"No, '{value_to_check}' is not in the set.")
-                
-                if lineCount % 10 == 0:
+                if line_count % 10 == 0:
                     print("skip call check ", skipCallSet)
              
                 if call in alarm_list:
@@ -158,15 +181,17 @@ def my_function():
                     #sound_alarm()
                     
             print(" ")
-            print("Line Count ", lineCount)
+            print("Line Count ", line_count)
         
             print(" ")
-            print("Skip Count ", skipCount)
+            print("Skip Count ", skip_count)
             
             print(" ")
-            print("Break Count ", tildeCount)
-            print("Plus Count ", plusCount)
-            print("Colon Count ", colonCount)
+            print("Tilde Count ", tilde_count)
+            print("Plus Count ", plus_count)
+            print("Colon Count ", colon_count)
+            
+            print("CQ Count ", cq_count)
             
             print("skip calls ", skipCallSet)
             
