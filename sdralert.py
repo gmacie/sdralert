@@ -71,7 +71,10 @@ def my_function():
                 # go to next line if time has already been processed.
                 # if line time is less than last run time then continue to next line
                 
-                
+                if line_time > last_time:
+                    print("practice time check stop line_time last_time", line_time, last_time)
+                    #last_time = line_time
+                    
                 # #02  14:38:15     50,313  FT8        1  0.3 2658 ~  CQ K2TY EM60
                 
                 match line_seperator:
@@ -196,7 +199,8 @@ def my_function():
             print("skip calls ", skipCallSet)
             
     except FileNotFoundError:
-        print(f"Error: The file '{filename}' was not found.")
+        current_time = get_time()
+        print(f"Error: The file '{file_name}' was not found.", current_time)
     except Exception as e:
         print(f"An error occurred: {e}")
       
@@ -352,8 +356,15 @@ def sound_alarm():
         
         time.sleep(60)
 
-while True:
+def main():
+    while True:
 
+        
+        my_function()
+        time.sleep(60) # Wait for 60 seconds (1 minute)        
+
+if __name__ == "__main__":
+    
     get_time()
     
     print("Script name:", sys.argv[0])
@@ -363,5 +374,4 @@ while True:
         print("No arguments provided.")
     
     sqlite_db()
-    my_function()
-    time.sleep(60) # Wait for 60 seconds (1 minute)           
+    main()
