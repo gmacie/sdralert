@@ -13,6 +13,15 @@ from datetime import datetime
 
 from email.message import EmailMessage
 
+import tempfile
+
+with tempfile.TemporaryDirectory() as td:
+    f_name = os.path.join(td, 'test')
+    with open(f_name, 'w') as fh:
+        fh.write('<content>')
+    # Now the file is written and closed and can be used for reading.
+
+
 # Get the current date
 today = date.today()
 
@@ -22,27 +31,44 @@ file_name = formatted_date + ".txt"
 
 print("file_name", file_name)
 
-directory_path = "c:/skmrsummary" # Replace with the actual path
-
+current_directory_path = Path.cwd()
+print(f"Current working directory (Path.cwd()): {current_directory_path}")
 
 def my_function():
 
-    alarm_list = ["3B8FA", "39BFR", "6W1RD", "9J2FI", "C5R", "E51WL", "EL2BG", "FR4AW", "HZ1DG", "PJ6Y", "PY0FB", "SO1WS", "TR8CA", "TZ4AM", "V51WW", "VP2MAA", "ZD7CTO", "ZS6OB"]
+    alarm_list = ["3B8FA", "39BFR", "5Z4VJ", "6W1RD", "9J2FI", "C5R", 
+                  "E51WL", "EL2BG", "FR4OO", "FR4AW", "HZ1DG", "PY0FB", "SO1WS", "TR8CA", "TY5AD", "TZ4AM", "V51WW", "VP2MAA", "ZD7CTO", "ZS6OB"]
     
-    grid_list  = ["CM93", "CN74", "CN75", "CN93", "DL89", "DM23", "DM27", "DM39", "DN01", "DN02", "DN03", "DN04", "DN10", "DN12", "DN21", "DN24", "DN32"]
+    # 445 CONF NEED 43
+    grid_list  = ["CM93",
+                  "CN74", "CN75", "CN93",
+                  "DL89",
+                  "DM23", "DM27", "DM39", "DM46", "DM49", "DM56",
+                  "DN01", "DN02", "DN03", "DN04", "DN08", "DN10", "DN12", "DN21", "DN24", "DN32", "DN38", "DN42", "DN44", "DN48", "DN51", "DN52", "DN54", "DN58",
+                  "DN64", "DN67", "DN68", "DN75", "DN76", "DN78", "DN98",
+                  "EL07", "EL39",
+                  "EM07", "EM23",
+                  "FN56", "FN57", "FN66"]
     
     line_count = 0
     skip_count = 0
+    time_skip_count = 0
     tilde_count = 0
     plus_count = 0
     colon_count = 0
     cq_count = 0
     last_occurence_char = 0
     skipCallSet = {"N1AAA"}
-    last_time = "00:00:00"
-        
-    print(file_name)
     
+    os.system('cls')
+    
+    formatted_date = today.strftime("%Y-%m-%d")
+
+    file_name = formatted_date + ".txt"  
+
+    print("file_name", file_name)
+    print(" ")
+          
     try:
         with open(file_name, 'r') as file:
             for line in file:
@@ -65,15 +91,18 @@ def my_function():
                 line_seperator = values[7]
                 
                 line_time   = values[1]
-                #print("line time ",line_time)
-		
+                		
                 compare_time(line_time)
                 # go to next line if time has already been processed.
                 # if line time is less than last run time then continue to next line
                 
                 if line_time > last_time:
-                    print("practice time check stop line_time last_time", line_time, last_time)
+                    pass
+                    #print("practice time check stop line_time last_time", line_time, last_time)
                     #last_time = line_time
+                else:
+                    time_skip_count = time_skip_count + 1
+                    continue
                     
                 # #02  14:38:15     50,313  FT8        1  0.3 2658 ~  CQ K2TY EM60
                 
@@ -82,6 +111,7 @@ def my_function():
                             plus_count = plus_count + 1
                             continue
                         case ":":
+                            # Q65-30A
                             colon_count = colon_count + 1
                             continue
                         case "~":
@@ -104,6 +134,8 @@ def my_function():
                 firstField = last.split(" ")[1] 
                 
                 call = last.split(" ")[2]
+                print("First field ", line_count, last, firstField)
+                input
                 
                 # check value 3 for 73 and R- !!!
                 try:
@@ -116,7 +148,7 @@ def my_function():
                     print(f"An unexpected error occurred with line '{last}': {e}")
                                 
                 # last field could be grid, 73 or report
-                #01  03:04:15     50,313  FT8       14  0.9 1514 ~  CQ KO5S EM50
+                #ok 01  03:04:15     50,313  FT8       14  0.9 1514 ~  CQ KO5S EM50
                 #04  13:51:30     50,275  Q65-30A   -9  0.2 1317 :  K0TPP AE5VB 73                        q0
                 #04  13:42:00     50,275  Q65-30A    2  0.2 1657 :  KA2UQW AE5VB EM50                     q0
                 #04  13:46:30     50,275  Q65-30A   -1  0.1 1657 :  K0TPP AE5VB R-10                      q0
@@ -135,7 +167,16 @@ def my_function():
                             print(f"Error processing line '{line}': {e}. Expected Grid got {len(last.split(''))}.")
                         except Exception as e:
                             # Catch any other unexpected errors
-                            print(f"An unexpected error occurred with line '{last}': {e}")
+                            #print(f"An unexpected error occurred with line looking for grid'{last}': {e}")
+                            print("No Grid on CQ")
+                
+                match grid:
+                        case "RR73" | "73" | "RRR":
+                            grid = ""
+                        case "~":
+                            pass
+                        case _:  # Default case, like 'else'
+                            pass
                 
                 # put call in list if cq but need to check skiplist for none cq lines
                 if grid == "EM50" or grid == "EM60" or grid == "EL49":
@@ -162,18 +203,20 @@ def my_function():
                     cursor = conn.cursor()
                     
                     # Insert data
-                    cursor.execute("INSERT INTO sdralerts (sdr_call, sdr_grid, sdr_time, sdr_freq, sdr_mode, sdr_report) VALUES (?, ?, ?, ?, ?, ?)", (call, grid, line_time, line_freq, line_mode, line_report))
+                    print("Line ", line_count, new_line)
+                    
+                    cursor.execute("INSERT INTO sdralerts (sdr_call, sdr_grid, sdr_time, sdr_freq, sdr_mode, sdr_report, sdr_fname) VALUES (?, ?, ?, ?, ?, ?, ?)", (call, grid, line_time, line_freq, line_mode, line_report, file_name))
 		            
                     conn.commit()
-                
-                if line_count % 10 == 0:
-                    print("skip call check ", skipCallSet)
-             
+                           
                 if call in alarm_list:
                     print("Alarm Triggered ",call)
-                    time.sleep(30)
-                    send_text()
+                    #time.sleep(30)
+                    message = f"{call} 6 Meter Alert Test sent from Python. {line_freq}"
+                    send_text(message)
+                    print("Sent text ")
                     #send_email()
+                    #print("Sent email ")
                     #sound_alarm()
                     
                 if grid in grid_list:
@@ -184,16 +227,19 @@ def my_function():
                     #sound_alarm()
                     
             print(" ")
-            print("Line Count ", line_count)
-        
-            print(" ")
-            print("Skip Count ", skip_count)
+            print("Time Skip ", time_skip_count)
             
             print(" ")
             print("Tilde Count ", tilde_count)
             print("Plus Count ", plus_count)
             print("Colon Count ", colon_count)
-            
+                    
+            print(" ")
+            print("Line Count ", line_count)
+        
+            print(" ")
+            print("Skip Count ", skip_count)
+                      
             print("CQ Count ", cq_count)
             
             print("skip calls ", skipCallSet)
@@ -246,7 +292,8 @@ def sqlite_db():
                 sdr_time TEXT NOT NULL,
                 sdr_freq REAL,
                 sdr_mode TEXT NOT NULL,
-                sdr_report TEST
+                sdr_report TEXT,
+                sdr_fname TEXT
             )
         ''')
        
@@ -271,7 +318,7 @@ def send_email():
     msg.set_content("This is the body of the email.")
     msg['Subject'] = 'SDR Alert for' 
     msg['From'] = 'gmacie@gmail.com'  # Replace with your email
-    msg['To'] = 'gmacie@yahoo.com' # Replace with recipient's email
+    msg['To'] = 'gmacie@yahoo.com' #, 'gmacie@gmail.com' # Replace with recipient's email
 
     # For Gmail, use 'smtp.gmail.com' and port 587 for TLS or 465 for SSL
     smtp_server = 'smtp.gmail.com'
@@ -295,7 +342,7 @@ def send_email():
         server.quit() # Close the connection
     
  
-def send_text():
+def send_text(text_msg):
     # Your email account info (use an App Password for Gmail)
     sender_email = "gmacie@gmail.com"
     password = "gvcd smvt ifal euvl "
@@ -307,7 +354,8 @@ def send_text():
     sms_gateway = f"{recipient_number}@{carrier_gateway}"
     
     # The message to send
-    message = "YJ0RS 6 Meter Alert Test sent from Python."
+    #message = f"{text_call} 6 Meter Alert Test sent from Python. {line_freq}"
+    message = text_msg
     
     # Establish a secure connection and send the text
     try:
@@ -358,9 +406,9 @@ def sound_alarm():
 
 def main():
     while True:
-
         
         my_function()
+        
         time.sleep(60) # Wait for 60 seconds (1 minute)        
 
 if __name__ == "__main__":
@@ -371,7 +419,25 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         print("First argument:", sys.argv[1])
     else:
-        print("No arguments provided.")
+        pass
+        #print("No arguments provided.")
+        
+    file_path = "last_time.txt"
+    
+    last_time = "00:00:00" # default to midnight
+    # need to delete the file at 23:59 every night
+    
+    try:
+        with open(file_path, 'r') as file:
+            first_line = file.readline()
+            print(f"The first line is: {first_line.strip()}") # .strip() removes trailing newline characters
+            last_time = first_line
+    except FileNotFoundError:
+        print(f"Error: The file '{file_path}' was not found.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    
+    print("Last Time ", last_time)
     
     sqlite_db()
     main()
